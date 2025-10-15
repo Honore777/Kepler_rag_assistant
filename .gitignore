@@ -1,45 +1,84 @@
-# Environments
-venv/
-.venv/
 
 
 # Environment variables
 .env
+*.env
 
-# Python
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# ChromaDB
-chroma_db/
-
-# IDE
-.vscode/
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+kepler_rag/
+kepler_rag_env/
+kepler_rag_venv/
 .idea/
-*.swp
-*.swo
+.vscode/
+*.code-workspace
 
-# OS
+# OS generated files
 .DS_Store
 Thumbs.db
 
-lesson.md
+# Logs and outputs
+*.log
+*.out
+*.bak
+*.tmp
+
+# Compiled / binary files
+*.pkl
+*.pickle
+*.h5
+*.bin
+*.pt
+*.npy
+*.npz
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints
+
+# Streamlit and cache folders
+.streamlit/
+cache/
+__cache__/
+.stcache/
+
+# Chroma and vector databases
+chroma_db/
+faiss_index/
+*.faiss
+*.pkl
+
+# Build directories
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Project-specific data
+data/
+*.txt~
+*.pdf~
+*.docx~
+*.bak
+
+# PyInstaller
+*.spec
+
+# VSCode + JetBrains
+.vscode/
+.idea/
+
+# Ready Tensor or model test artifacts
+readytensor_logs/
+verification_output/
+
+# Temporary files
+tmp/
+temp/
