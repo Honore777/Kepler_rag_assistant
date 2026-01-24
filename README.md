@@ -29,7 +29,7 @@ The assistant follows a standard Retrieval-Augmented Generation workflow:
 5. The vector database retrieves the top-k most relevant chunks.  
 6. Retrieved context is injected into a prompt template and passed to the LLM for answer generation.
 
-> A system architecture diagram can be included in the Ready Tensor publication to visually illustrate this flow.
+
 
 ---
 
@@ -37,8 +37,8 @@ The assistant follows a standard Retrieval-Augmented Generation workflow:
 
 To balance retrieval accuracy and contextual completeness, the following chunking strategy is used:
 
-- **Chunk size:** approximately 500 tokens  
-- **Chunk overlap:** approximately 50 tokens  
+- **Chunk size:** 1000 tokens  
+- **Chunk overlap:**  50 tokens  
 
 **Rationale:**
 - Smaller chunks improve retrieval precision.
@@ -71,12 +71,6 @@ Retrieval quality was evaluated using manual inspection and relevance checks, wh
 - Absence of hallucinated content  
 - Coverage of handbook-specific policies  
 
-**Sample evaluation:**
-
-| Query | Retrieval Quality | Answer Accuracy |
-|------|------------------|----------------|
-| Graduation requirements | High | Correct |
-| Attendance policy | High | Correct |
 
 Future improvements may include automated metrics such as recall@k or embedding similarity thresholds.
 
