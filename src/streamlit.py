@@ -19,14 +19,11 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown(
-    """
+
+st.info( """
     Ask any question about the Kepler College Student Handbook.  
     The AI will only answer based on the handbook content.
-    """
-)
-
-
+    """)
 user_query = st.text_input("Enter your question here:")
 
 
@@ -40,7 +37,7 @@ if st.button("Get Answer") and user_query.strip() != "":
     st.markdown(
         f"""
         <div style="
-            background-color: #f7f7f7;
+            background-color: grey;
             border: 1px solid #ddd;
             border-radius: 10px;
             padding: 15px;
