@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = os.environ.get("LLM_PROVIDER", "extractive")
     # Accept common aliases so your existing root `.env` works without changes.
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", ""))
-    GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", os.environ.get("MODEL_NAME", "gemini-1.5-flash"))
+    GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", os.environ.get("MODEL_NAME", "gemini-3.8-flash"))
     GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
     GROQ_MODEL: str = os.environ.get("GROQ_MODEL", os.environ.get("MODEL_NAME", "qwen/qwen3.8-27b"))
     LLM_TIMEOUT_S: int = int(os.environ.get("LLM_TIMEOUT_S", "30"))
