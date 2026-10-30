@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - UPLOAD_DIR=/app/data/uploads
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+
+# Optionally, add a frontend service here. For local development you can run
+# the Next.js dev server directly in `frontend/` with `npm run dev`.

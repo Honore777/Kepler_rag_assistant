@@ -1,0 +1,55 @@
+# Render blueprint: one API (Docker) + one web frontend (Node).
+# Secrets marked `sync: false` are entered once in the Render dashboard.
+services:
+  - type: web
+    name: kepler-api
+    runtime: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        sync: false            # Supabase Postgres connection string (production)
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false            # e.g. https://kepler-web.onrender.com
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: none            # frontend and API are on different onrender.com sites
+      - key: STAFF_REGISTRATION_CODE
+        sync: false
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: EMBEDDING_MODEL
+        value: all-MiniLM-L6-v2
+      - key: EMBEDDING_DIM
+        value: "384"
+      - key: DB_SSL_CA_FILE
+        value: certs/supabase-ca.pem
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        sync: false            # your bucket name, e.g. kepler-documents
+      - key: RAG_DISTANCE_THRESHOLD
+        value: "0.9"
+
+  - type: web
+    name: kepler-web
+    runtime: node
+    rootDir: frontend
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npx next start -p $PORT
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE
+        sync: false            # e.g. https://kepler-api.onrender.com (needed at build time)
+      - key: NODE_VERSION
+        value: "20"

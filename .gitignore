@@ -82,3 +82,12 @@ verification_output/
 # Temporary files
 tmp/
 temp/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+tsconfig.tsbuildinfo
+
+# Stray run artifacts
+*.exit

@@ -1,0 +1,49 @@
+fastapi>=0.128.0
+uvicorn[standard]>=0.40.0
+python-multipart>=0.0.22
+python-jose[cryptography]>=3.5.0
+passlib[bcrypt]>=1.7.4
+aiofiles>=25.1.0
+
+# Vector store: pgvector inside Postgres (Supabase)
+pgvector>=0.3.6
+psycopg2-binary>=2.9.9
+
+# Config / schemas
+pydantic>=2.12.0
+pydantic-settings>=2.14.0
+python-dotenv>=1.0.0
+sqlalchemy>=2.0.36
+alembic>=1.13.3
+asyncpg>=0.30.0
+certifi>=2024.2.2
+
+# Reliability
+tenacity>=9.0.0
+
+# Rate limiting
+slowapi>=0.1.9
+fastapi-limiter>=0.1.6
+
+# Redis for local rate limiting (phase 1)
+redis>=5.0.0
+
+# LangChain for professional document loading
+langchain-community>=0.0.20
+langchain>=0.1.0
+
+# LLM + optional PDF ingestion
+google-generativeai>=0.8.6
+pypdf>=6.10.2
+
+# Optional LLM provider
+groq>=0.32.0
+
+# Supabase storage (optional but recommended for production)
+supabase>=2.6.0
+
+# Light local embeddings (ONNX, no PyTorch): all-MiniLM-L6-v2, 384 dimensions.
+fastembed>=0.3.6
+
+# Optional heavier alternative (PyTorch, ~GBs). Not needed when fastembed is installed:
+# sentence-transformers
