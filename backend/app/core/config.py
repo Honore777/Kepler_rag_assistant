@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     COOKIE_SAMESITE: str = os.environ.get("COOKIE_SAMESITE", "lax")
     STAFF_REGISTRATION_CODE: str = os.environ.get("STAFF_REGISTRATION_CODE", "")
     EMBEDDING_MODEL: str = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    # "local" = in-process MiniLM (needs ~300MB RAM); "gemini" = Gemini API, no local model.
+    # Every vector in one database must come from the same provider.
+    EMBEDDING_PROVIDER: str = os.environ.get("EMBEDDING_PROVIDER", "local")
     # Dimension of the pgvector column. If unset, resolved in the validator:
     # 768 for Gemini embeddings, 384 for the local MiniLM / hash fallback.
     EMBEDDING_DIM: int | None = None

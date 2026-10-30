@@ -77,7 +77,7 @@ const ProfessionalFooter: React.FC = () => {
           <p>
             &copy; {year} {site.name}. All rights reserved.
           </p>
-          <p>The pattern above is Imigongo, a traditional Rwandan art form.</p>
+          <p>Kepler College 2025 Business Analytics Class</p>
         </div>
       </div>
     </footer>

@@ -1,9 +1,11 @@
 """Embedding service.
 
-Priority order:
-1) Gemini embeddings (if `GEMINI_API_KEY` is set)
-2) Sentence-transformers when `EMBEDDING_MODEL` is configured
-3) Deterministic hash fallback (emergency only, low quality)
+Provider is chosen by ``EMBEDDING_PROVIDER``:
+- ``gemini``: Gemini API (gemini-embedding-001, truncated to EMBEDDING_DIM). No
+  local model is loaded, so memory stays small. Failures raise; there is no
+  silent fallback because mixed providers would corrupt the vector column.
+- ``local`` (default): sentence-transformers if installed, else fastembed ONNX
+  MiniLM, else a deterministic hash fallback (emergency only, low quality).
 
 All paths must return vectors of dimension ``settings.EMBEDDING_DIM`` so they
 match the pgvector column.
@@ -20,11 +22,6 @@ try:
 except Exception:  # pragma: no cover
     SentenceTransformer = None
 
-try:
-    from fastembed import TextEmbedding
-except Exception:  # pragma: no cover
-    TextEmbedding = None
-
 _sentence_transformer = None
 _fastembed_model = None
 
@@ -32,8 +29,10 @@ _fastembed_model = None
 def _fastembed_embed(texts: List[str]):
     """Light ONNX build of all-MiniLM-L6-v2 (384-d, no PyTorch) for small servers."""
     global _fastembed_model
-    if TextEmbedding is None:
-        raise RuntimeError("fastembed is unavailable")
+    try:
+        from fastembed import TextEmbedding
+    except Exception as e:
+        raise RuntimeError("fastembed is unavailable") from e
     if _fastembed_model is None:
         _fastembed_model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
     return [v.tolist() for v in _fastembed_model.embed(texts)]
@@ -80,29 +79,63 @@ def _hash_embed(texts: List[str], dim: int | None = None):
     return vectors
 
 
-@with_retries(max_attempts=3)
-def _gemini_embed(texts: List[str], for_query: bool = False):
-    import google.generativeai as genai
+GEMINI_EMBED_MODEL = "gemini-embedding-001"
+_GEMINI_BATCH = 50
+
+
+@with_retries(max_attempts=5, min_wait_s=6.0, max_wait_s=40.0)
+def _gemini_embed_batch(texts: List[str], task_type: str):
+    """One batchEmbedContents call. Output is truncated to EMBEDDING_DIM and L2-normalised."""
+    import json
+    import math
+    import urllib.error
+    import urllib.request
 
     if not settings.GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY not set")
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    # Gemini embedding model name is separate from generation models.
-    model = "text-embedding-004"
-    task_type = "retrieval_query" if for_query else "retrieval_document"
+    dim = settings.EMBEDDING_DIM
+    body = json.dumps(
+        {
+            "requests": [
+                {
+                    "model": f"models/{GEMINI_EMBED_MODEL}",
+                    "content": {"parts": [{"text": t}]},
+                    "taskType": task_type,
+                    "outputDimensionality": dim,
+                }
+                for t in texts
+            ]
+        }
+    ).encode()
+    req = urllib.request.Request(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_EMBED_MODEL}:batchEmbedContents",
+        body,
+        {"Content-Type": "application/json", "x-goog-api-key": settings.GEMINI_API_KEY},
+    )
+    try:
+        data = json.load(urllib.request.urlopen(req, timeout=settings.LLM_TIMEOUT_S))
+    except urllib.error.HTTPError as e:
+        if e.code in (429, 500, 502, 503, 504):
+            raise RetryableServiceError(f"Gemini embeddings HTTP {e.code}") from e
+        raise RuntimeError(f"Gemini embeddings HTTP {e.code}: {e.read()[:200]!r}") from e
+
     vectors = []
-    for t in texts:
-        try:
-            resp = genai.embed_content(model=model, content=t, task_type=task_type)
-        except Exception as e:
-            msg = str(e).lower()
-            if "429" in msg or "rate" in msg or "timeout" in msg or "temporar" in msg or "unavailable" in msg:
-                raise RetryableServiceError(str(e)) from e
-            raise
-        vec = resp.get("embedding") if isinstance(resp, dict) else getattr(resp, "embedding", None)
-        if not vec:
-            raise RuntimeError("Gemini embedding returned empty vector")
-        vectors.append(vec)
+    for item in data.get("embeddings", []):
+        v = item.get("values") or []
+        if len(v) != dim:
+            raise RuntimeError(f"Gemini returned {len(v)}-d vector, expected {dim}")
+        norm = math.sqrt(sum(x * x for x in v)) or 1.0
+        vectors.append([x / norm for x in v])
+    if len(vectors) != len(texts):
+        raise RuntimeError("Gemini embeddings returned an unexpected number of vectors")
+    return vectors
+
+
+def _gemini_embed(texts: List[str], for_query: bool = False):
+    task_type = "RETRIEVAL_QUERY" if for_query else "RETRIEVAL_DOCUMENT"
+    vectors: List[List[float]] = []
+    for i in range(0, len(texts), _GEMINI_BATCH):
+        vectors.extend(_gemini_embed_batch(texts[i : i + _GEMINI_BATCH], task_type))
     return vectors
 
 
@@ -110,12 +143,10 @@ def embed_texts(texts: List[str], for_query: bool = False):
     if isinstance(texts, str):
         texts = [texts]
 
-    # Gemini embeddings are 768-d, so they are only used if the column was migrated to 768.
-    if settings.GEMINI_API_KEY and settings.EMBEDDING_DIM == 768:
-        try:
-            return _gemini_embed(texts, for_query=for_query)
-        except Exception:
-            pass
+    # Gemini mode never falls back to a local model: mixing providers inside one
+    # vector column silently ruins retrieval, so failures must surface.
+    if (settings.EMBEDDING_PROVIDER or "local").lower().strip() == "gemini":
+        return _gemini_embed(texts, for_query=for_query)
 
     # Local 384-d models: sentence-transformers if installed, else the light fastembed build.
     if settings.EMBEDDING_MODEL:
