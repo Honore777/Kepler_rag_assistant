@@ -330,6 +330,15 @@
   .answer-text p {
     @apply whitespace-pre-wrap;
   }
+  .answer-text strong {
+    @apply font-semibold text-ink;
+  }
+  .answer-text em {
+    @apply italic;
+  }
+  .answer-text code {
+    @apply rounded-md bg-raised px-1.5 py-0.5 font-mono text-[13px];
+  }
   .answer-text ol {
     counter-reset: answer-item;
     @apply space-y-2.5;

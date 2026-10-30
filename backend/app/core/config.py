@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", ""))
     GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", os.environ.get("MODEL_NAME", "gemini-1.5-flash"))
     GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
-    GROQ_MODEL: str = os.environ.get("GROQ_MODEL", os.environ.get("MODEL_NAME", "llama-3.1-8b-instant"))
+    GROQ_MODEL: str = os.environ.get("GROQ_MODEL", os.environ.get("MODEL_NAME", "qwen/qwen3.8-27b"))
     LLM_TIMEOUT_S: int = int(os.environ.get("LLM_TIMEOUT_S", "30"))
 
     # Reserved for future production-grade persistence (not wired yet)

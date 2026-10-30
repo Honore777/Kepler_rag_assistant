@@ -3,13 +3,19 @@
 This service is responsible for turning retrieved context into a final answer.
 
 - `extractive` mode: returns top passages (no external API).
-- `gemini` mode: calls Gemini with retries and falls back to extractive.
+- `groq`/`gemini`/`auto` modes: call an LLM and fall back down the chain to
+  extractive. Every fallback step is logged so silent degradation is visible.
 """
 
+import logging
 from typing import List
 
 from app.core.config import settings
 from app.utils.retry import RetryableServiceError, with_retries
+
+logger = logging.getLogger(__name__)
+
+_extractive_warned = False
 
 
 def _extractive_answer(question: str, passages: List[str]) -> str:
@@ -97,42 +103,35 @@ def generate_answer(question: str, passages: List[str], history: List[str] | Non
         "Context (retrieved passages):\n" + "\n\n---\n\n".join(passages[:8])
     )
 
-    # If provider explicitly requested, honor it.
-    if provider == "groq":
-        try:
-            return _groq_generate(prompt)
-        except Exception:
-            if settings.GEMINI_API_KEY:
-                try:
-                    return _gemini_generate(prompt)
-                except Exception:
-                    return _extractive_answer(question, passages)
-            return _extractive_answer(question, passages)
+    global _extractive_warned
 
-    if provider == "gemini":
-        try:
-            return _gemini_generate(prompt)
-        except Exception:
-            if settings.GROQ_API_KEY:
-                try:
-                    return _groq_generate(prompt)
-                except Exception:
-                    return _extractive_answer(question, passages)
-            return _extractive_answer(question, passages)
-
-    # Auto mode: Groq -> Gemini -> extractive
-    if provider in ("auto", ""):
-        if settings.GROQ_API_KEY:
-            try:
-                return _groq_generate(prompt)
-            except Exception:
-                pass
-        if settings.GEMINI_API_KEY:
-            try:
-                return _gemini_generate(prompt)
-            except Exception:
-                pass
+    if provider in ("groq", "gemini"):
+        # Requested provider first, the other configured one as backup.
+        order = [provider, "gemini" if provider == "groq" else "groq"]
+    elif provider in ("auto", ""):
+        order = ["groq", "gemini"]
+    else:
+        if not _extractive_warned:
+            _extractive_warned = True
+            logger.warning(
+                "[llm] LLM_PROVIDER=%s: answers are raw passages, no AI synthesis",
+                provider,
+            )
         return _extractive_answer(question, passages)
 
-    # extractive (or unknown)
+    generate = {"groq": _groq_generate, "gemini": _gemini_generate}
+    has_key = {"groq": bool(settings.GROQ_API_KEY), "gemini": bool(settings.GEMINI_API_KEY)}
+
+    for name in order:
+        if not has_key[name]:
+            logger.info("[llm] %s skipped: API key not configured", name)
+            continue
+        try:
+            return generate[name](prompt)
+        except Exception as e:
+            logger.warning(
+                "[llm] %s failed (%s: %s); falling back", name, type(e).__name__, e
+            )
+
+    logger.warning("[llm] no AI provider succeeded; returning extractive passages")
     return _extractive_answer(question, passages)

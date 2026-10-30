@@ -80,6 +80,13 @@ function paragraphsFrom(text: string): AnswerBlock[] {
       out.push({ kind: 'ul', items: lines.map((l) => l.replace(/^[-•*]\s+/, '')) });
       continue;
     }
+    // Bullets embedded mid-line: "notes that: * item one * item two * item three"
+    if ((chunk.match(/\s\*\s/g) ?? []).length >= 2) {
+      const [intro, ...items] = chunk.split(/\s\*\s/);
+      if (intro.trim()) out.push({ kind: 'p', text: intro.trim() });
+      out.push({ kind: 'ul', items: items.map((s) => s.trim()).filter(Boolean) });
+      continue;
+    }
     const sentences = chunk.match(/[^.!?]+[.!?]+["')\]]?|\S[^.!?]*$/g) ?? [chunk];
     if (sentences.length <= 3 || chunk.length < 360) {
       out.push({ kind: 'p', text: chunk });
@@ -96,6 +103,28 @@ function paragraphsFrom(text: string): AnswerBlock[] {
     if (cur.trim()) out.push({ kind: 'p', text: cur.trim() });
   }
   return out;
+}
+
+/** Renders the small markdown subset answers contain: **bold**, *italic*, `code`. */
+const INLINE_MD = /(\*\*[^*]+?\*\*|\*[^*\n]+?\*|`[^`\n]+?`)/g;
+
+function InlineText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(INLINE_MD).map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+          return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+          return <em key={i}>{part.slice(1, -1)}</em>;
+        }
+        if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+          return <code key={i}>{part.slice(1, -1)}</code>;
+        }
+        return part;
+      })}
+    </>
+  );
 }
 
 function formatAnswer(raw: string): AnswerBlock[] {
@@ -124,17 +153,23 @@ function AnswerBody({ text }: { text: string }) {
         block.kind === 'ol' ? (
           <ol key={i}>
             {block.items!.map((item, j) => (
-              <li key={j}>{item}</li>
+              <li key={j}>
+                <InlineText text={item} />
+              </li>
             ))}
           </ol>
         ) : block.kind === 'ul' ? (
           <ul key={i}>
             {block.items!.map((item, j) => (
-              <li key={j}>{item}</li>
+              <li key={j}>
+                <InlineText text={item} />
+              </li>
             ))}
           </ul>
         ) : (
-          <p key={i}>{block.text}</p>
+          <p key={i}>
+            <InlineText text={block.text!} />
+          </p>
         )
       )}
     </div>
